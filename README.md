@@ -20,6 +20,21 @@ Control a PWM fan over the I²C bus.
 
 Adjustments for other AVR microcontrollers should be easy.
 
+## I²C registers
+
+| Register | Description |
+|---|---|
+| 0x00 | **Status** - By writing a 1 to bit 0 of this register you can trigger a re-calibration of the fan. |
+| 0x01 | **Fan speed** - By writing to this register you can set the fan speed. A value of `0` means "fan off" and `255` is full speed. |
+| 0x02 | **Minimal PWM level** - Read or write the minimal PWM level at which the fall will rotate when *fan speed* is set to `1`. This will be detected automatically at startup. |
+| 0x03 | **Current fan speed in revolutions per second (RPS)** - Read the current fan speed in RPS. This is calculated from the fan tacho signal. |
+| 0x04 and 0x05 | **Current fan speed in revolutions per minute (RPM)** - Read the current fan speed in RPM. This is calculated from the fan tacho signal. `0x04` is the low-byte and `0x05` the high-byte. |
+
+### Hint on I²C bus
+
+Since the ATtiny microcontrollers use a USI (Universal Serial Interface) to provide the I²C bus, there may be some problems reading or writing more than one byte at once.  
+To overcome this issue you should read/write byte by byte, even if want to read the fan speed in RPM.
+
 ## Wiring
 
 ![Wiring](./doc/attiny-i2c-fan-control-wiring.png)
