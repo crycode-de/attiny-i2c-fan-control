@@ -10,3 +10,8 @@ include
 lib
 test
 build.log
+CMakeLists.txt
+CMakeListsPrivate.txt
+cmake-build-*
+.idea
+platformio_override.ini

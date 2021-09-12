@@ -9,7 +9,7 @@
 
 #include "config.h"
 #include <PinChangeInterrupt.h>
-#include <TinyWireS.h>
+#include <Wire.h>
 
 /**
  * Buffer size of the I2C RX buffer.
@@ -30,14 +30,14 @@
  */
 #define checkTime(a, b) ((long)(a - b) >= 0)
 
-bool ledStatus = false;
+//bool ledStatus = false;
 
 volatile uint16_t rps = 0;
 uint16_t rpm = 0;
 
 unsigned long now = 0;
 unsigned long timeNextRpmCalc = 0;
-unsigned long timepwmLevelMinCalNextStep = 0;
+//unsigned long timePwmLevelMinCalNextStep = 0;
 
 uint8_t pwmLevel = 0;
 uint8_t pwmLevelMin = 0;
@@ -78,7 +78,7 @@ void setFanSpeed (uint8_t speed) {
  * send-buffer when using this callback
  */
 void i2cRequestEvent() {
-    TinyWireS.send(i2c_regs[reg_position]);
+    Wire.write(i2c_regs[reg_position]);
     // Increment the reg position on each read, and loop back to zero
     reg_position++;
     if (reg_position >= reg_size)
@@ -96,7 +96,7 @@ void i2cRequestEvent() {
  * To be quick, set flags for long running tasks to be called from the mainloop
  * instead of running them directly.
  */
-void i2cReceiveEvent (uint8_t howMany) {
+void i2cReceiveEvent (int howMany) {
   if (howMany < 1 || howMany > TWI_RX_BUFFER_SIZE) {
     // Sanity-check
     return;
@@ -104,7 +104,7 @@ void i2cReceiveEvent (uint8_t howMany) {
 
   blinkLed = true;
 
-  reg_position = TinyWireS.receive();
+  reg_position = Wire.read();
   howMany--;
   if (!howMany) {
       // This write was only to set the buffer for next read
@@ -114,23 +114,23 @@ void i2cReceiveEvent (uint8_t howMany) {
   while (howMany--) {
     if (reg_position == 0x00 && !pwmLevelMinCal && !pwmLevelMinCalStart) {
       // status register
-      i2c_regs[0x00] = TinyWireS.receive() & 0b00000001; // only interested in bit 0
+      i2c_regs[0x00] = Wire.read() & 0b00000001; // only interested in bit 0
       if (bitRead(i2c_regs[0x00], 0)) {
         // if bit 0 is set start calibration
         pwmLevelMinCalStart = true;
       }
     } else if (reg_position == 0x01 && !pwmLevelMinCal && !pwmLevelMinCalStart) {
       // fan speed register
-      i2c_regs[0x01] = TinyWireS.receive();
+      i2c_regs[0x01] = Wire.read();
       setFanSpeed(i2c_regs[0x01]);
     } else if (reg_position == 0x02 && !pwmLevelMinCal && !pwmLevelMinCalStart) {
       // pwm min register
-      i2c_regs[0x02] = TinyWireS.receive();
+      i2c_regs[0x02] = Wire.read();
       pwmLevelMin = i2c_regs[0x02];
       setFanSpeed(i2c_regs[0x01]);
     } else {
       // no writeable register... just read and discard data
-      TinyWireS.receive();
+      Wire.read();
     }
 
     reg_position++;
@@ -143,7 +143,7 @@ void i2cReceiveEvent (uint8_t howMany) {
 /**
  * ISR to handle tacho impulses.
  */
-void handlePcintTacho (void) {
+void handlePcintTacho () {
   rps++;
 }
 
@@ -156,9 +156,9 @@ void setup() {
 
   attachPCINT(digitalPinToPCINT(PIN_TACHO), handlePcintTacho, FALLING);
 
-  TinyWireS.begin(I2C_SLAVE_ADDRESS);
-  TinyWireS.onReceive(i2cReceiveEvent);
-  TinyWireS.onRequest(i2cRequestEvent);
+  Wire.begin(I2C_SLAVE_ADDRESS);
+  Wire.onReceive(i2cReceiveEvent);
+  Wire.onRequest(i2cRequestEvent);
 
   now = millis();
   timeNextRpmCalc = now + 1000 * RPS_MULTI;
@@ -171,12 +171,12 @@ void setup() {
  * Main loop.
  */
 void loop() {
-  TinyWireS_stop_check();
+  //TinyWireS_stop_check();
 
   // need to blink the LED?
   if (blinkLed) {
     digitalWrite(LED, HIGH);
-    tws_delay(50);
+    delay(50);
     digitalWrite(LED, LOW);
     blinkLed = false;
   }
